@@ -1,5 +1,4 @@
-const { Product, Keranjang, Pesanan } = require('../models');
-const { Op  } = require('sequelize');
+const pool = require("../config/config.vercel");
 
 class Controller {
 
@@ -8,20 +7,13 @@ class Controller {
         try {
             const { search } = req.query;
 
-            let whereCondition = {};
+            let query = 'SELECT * FROM "products"';
             if (search) {
-                whereCondition = {
-                    nama: {
-                        [Op.iLike]: `%${search}%` // Menggunakan Op.iLike agar pencarian bersifat case-insensitive
-                    }
-                };
+                query += ` WHERE nama ILIKE '%${search}%'`; // Menggunakan ILIKE agar pencarian bersifat case-insensitive
             }
 
-            const dataProduct = await Product.findAll({
-                where: whereCondition
-            });
-
-            res.status(200).json(dataProduct);
+            const { rows } = await pool.query(query);
+            res.status(200).json(rows);
         } catch (error) {
             console.error('Error in getProduct:', error);
             res.status(500).json({ error: 'Internal Server Error' });
@@ -32,9 +24,11 @@ class Controller {
     static async getByIdProduct(req, res, next) {
         try {
             const { id } = req.params;
-            const dataByIdProduct = await Product.findByPk(id);
-            if (dataByIdProduct) {
-                res.status(200).json(dataByIdProduct);
+            const query = 'SELECT * FROM "products" WHERE id = $1';
+            const { rows } = await pool.query(query, [id]);
+
+            if (rows.length > 0) {
+                res.status(200).json(rows[0]);
             } else {
                 res.status(404).json({ error: 'Product not found' });
             }
@@ -44,29 +38,30 @@ class Controller {
         }
     }
 
-    // postProduct
+    // postKeranjangs
     static async postKeranjangs(req, res, next) {
         try {
-            const { jumlah_pesanan, keterangan, productId } = req.body;
+            const { jumlah_pesanan, keterangan, product_id } = req.body;
 
             if (jumlah_pesanan === "") {
                 return res.status(400).json({ error: 'Pesanan tidak boleh kosong ' });
             }
-            const existingProduct = await Product.findByPk(productId);
 
-            if (!existingProduct) {
+            // Pastikan untuk mengganti "keranjangs" dan "product_id" sesuai dengan nama tabel dan kolom yang benar
+            const existingProduct = await pool.query('SELECT * FROM "products" WHERE id = $1', [product_id]);
+
+            if (existingProduct.rows.length === 0) {
                 return res.status(404).json({ error: 'Product not found' });
             }
 
-            const newPesanan = await Keranjang.create({
-                jumlah_pesanan: jumlah_pesanan,
-                keterangan: keterangan,
-                productId: productId
-            });
+            const insertQuery = 'INSERT INTO "keranjangs" (jumlah_pesanan, keterangan, "product_id") VALUES ($1, $2, $3) RETURNING *';
+            const values = [jumlah_pesanan, keterangan, product_id];
 
-            res.status(200).json(newPesanan);
+            const { rows } = await pool.query(insertQuery, values);
+
+            res.status(200).json(rows[0]);
         } catch (error) {
-            console.error('Error in postPesanan:', error);
+            console.error('Error in postKeranjangs:', error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     }
@@ -74,38 +69,57 @@ class Controller {
     // getKeranjangs
     static async getKeranjangs(req, res, next) {
         try {
-            const dataKeranjangs = await Keranjang.findAll({
-                include: {
-                    model: Product
-                }
-            });
-            res.status(200).json(dataKeranjangs);
+            const query = `
+            SELECT
+            keranjangs.id,
+            keranjangs.jumlah_pesanan,
+            keranjangs.keterangan,
+            keranjangs.product_id AS productId,
+            jsonb_build_object(
+                'id', products.id,
+                'kode', products.kode,
+                'nama', products.nama,
+                'harga', products.harga,
+                'is_ready', products.is_ready,
+                'gambar', products.gambar
+            ) AS product
+        FROM keranjangs
+        INNER JOIN products ON keranjangs.product_id = products.id
+        `;
+
+            const { rows } = await pool.query(query);
+            res.status(200).json(rows);
         } catch (error) {
             console.error('Error in getKeranjangs:', error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     }
 
+
+
     // deleteKeranjangs
     static async deleteKeranjangs(req, res, next) {
         try {
-            const { id } = req.params
-            const isValidId = await Keranjang.findByPk(id)
+            const { id } = req.params;
 
-            if (!isValidId) {
-                res.status(400).json({ error: 'Invalid Request', message: `Data ${id} is not valid` });
-                return;
+            // Pastikan terlebih dahulu bahwa keranjang dengan ID yang diberikan ada
+            const isValidIdQuery = 'SELECT * FROM keranjangs WHERE id = $1';
+            const isValidIdResult = await pool.query(isValidIdQuery, [id]);
+
+            if (isValidIdResult.rows.length === 0) {
+                return res.status(400).json({ error: 'Invalid Request', message: `Data ${id} is not valid` });
             }
 
-            const delKeranjang = await Keranjang.destroy({
-                where: { id: id }
-            })
+            const deleteKeranjangQuery = 'DELETE FROM keranjangs WHERE id = $1 RETURNING *';
+            const { rows } = await pool.query(deleteKeranjangQuery, [id]);
+
             res.status(200).json({
                 name: `Delete Data Keranjang ${id} Successfully`,
-                delKeranjang
-            })
+                deleteKeranjangQuery: rows
+            });
+
         } catch (error) {
-            console.error('Error in getKeranjangs:', error);
+            console.error('Error in deleteKeranjangs:', error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     }
@@ -114,13 +128,12 @@ class Controller {
     static async deleteAllKeranjangs(req, res, next) {
         try {
             // Hapus semua data keranjang
-            const delAllKeranjangs = await Keranjang.destroy({
-                where: {} // Menghapus semua data, karena tidak ada kondisi where
-            });
+            const deleteAllKeranjangsQuery = 'DELETE FROM keranjangs';
+            const { rowCount } = await pool.query(deleteAllKeranjangsQuery);
 
             res.status(200).json({
                 name: 'Delete All Data Keranjang Successfully',
-                delAllKeranjangs
+                deletedCount: rowCount
             });
         } catch (error) {
             console.error('Error in deleteAllKeranjangs:', error);
@@ -131,28 +144,36 @@ class Controller {
     // postPesanans
     static async postPesanans(req, res, next) {
         try {
-            const { nama, noMeja, keranjangId } = req.body;
-            const isValidPesanans = await Keranjang.findByPk(keranjangId);
+            const { nama, noMeja, keranjang_id } = req.body;
 
-            if (!isValidPesanans) {
+            // Periksa apakah pesanan dengan ID yang diberikan ada di keranjang
+            const isValidPesanansQuery = 'SELECT * FROM keranjangs WHERE id = $1';
+            const isValidPesanans = await pool.query(isValidPesanansQuery, [keranjang_id]);
+
+            if (isValidPesanans.rows.length === 0) {
                 return res.status(404).json({ error: 'Pesanan not found' });
             }
 
-            const newPesanan = await Pesanan.create({
-                nama: nama,
-                noMeja: noMeja,
-                keranjangId: keranjangId
-            });
+            // Tambahkan pesanan baru ke tabel pesanans
+            const addPesananQuery = 'INSERT INTO pesanans (nama, noMeja, keranjang_id) VALUES ($1, $2, $3) RETURNING *';
+            const { rows } = await pool.query(addPesananQuery, [nama, noMeja, keranjang_id]);
 
-            res.status(200).json(newPesanan);
+            res.status(200).json(rows[0]);
 
         } catch (error) {
-            console.error('Error in postPesanan:', error);
+            console.error('Error in postPesanans:', error);
             res.status(500).json({ error: 'Internal Server Error' });
         }
     }
 
+
+
 }
 
 module.exports = Controller;
+
+
+
+
+
 

@@ -5,7 +5,6 @@ var cookieParser = require('cookie-parser');
 var logger = require('morgan');
 const cors = require('cors')
 require('dotenv').config()
-// require('./config/config.vercel')
 
 var indexRouter = require('./routes/index');
 var usersRouter = require('./routes/users');

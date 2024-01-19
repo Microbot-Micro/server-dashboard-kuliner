@@ -109,10 +109,8 @@ CREATE TABLE keranjangs (
   id SERIAL PRIMARY KEY,
   jumlah_pesanan VARCHAR(255),
   keterangan VARCHAR(255),
-  productId INT,
-  createdAt TIMESTAMP NOT NULL,
-  updatedAt TIMESTAMP NOT NULL,
-  FOREIGN KEY (productId) REFERENCES products (id) ON DELETE CASCADE ON UPDATE CASCADE
+  product_id INT,
+  FOREIGN KEY (product_id) REFERENCES products (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Table "pesanans"
@@ -121,37 +119,32 @@ CREATE TABLE pesanans (
   id SERIAL PRIMARY KEY,
   nama VARCHAR(255),
   noMeja VARCHAR(255),
-  keranjangId INT,
-  createdAt TIMESTAMP NOT NULL,
-  updatedAt TIMESTAMP NOT NULL,
-  FOREIGN KEY (keranjangId) REFERENCES keranjangs (id) ON DELETE CASCADE ON UPDATE CASCADE
+  keranjang_id INT,
+  FOREIGN KEY (keranjang_id) REFERENCES keranjangs (id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- Table "products"
-DROP TABLE IF EXISTS products;
 CREATE TABLE products (
   id SERIAL PRIMARY KEY,
   kode VARCHAR(255),
   nama VARCHAR(255),
   harga INT,
   is_ready BOOLEAN,
-  gambar VARCHAR(255),
-  createdAt TIMESTAMP NOT NULL,
-  updatedAt TIMESTAMP NOT NULL
+  gambar VARCHAR(255)
 );
 
 -- Isi tabel "products"
-INSERT INTO products (kode, nama, harga, is_ready, gambar, createdAt, updatedAt)
+INSERT INTO products (kode, nama, harga, is_ready, gambar)
 VALUES
-  ('K-01', 'Sate Ayam', 16000, true, 'sate-ayam.jpg', '2024-01-18 08:54:14', '2024-01-18 08:54:14'),
-  ('K-02', 'Nasi Goreng Telur', 14000, true, 'nasi-goreng-telor.jpg', '2024-01-18 08:54:14', '2024-01-18 08:54:14'),
-  ('K-03', 'Nasi Rames', 12000, true, 'nasi-rames.jpg', '2024-01-18 08:54:14', '2024-01-18 08:54:14'),
-  ('K-04', 'Mie Ayam Bakso', 14000, true, 'mie-ayam-bakso.jpg', '2024-01-18 08:54:14', '2024-01-18 08:54:14'),
-  ('K-05', 'Mie Goreng', 13000, true, 'mie-goreng.jpg', '2024-01-18 08:54:14', '2024-01-18 08:54:14'),
-  ('K-06', 'Bakso', 10000, true, 'bakso.jpg', '2024-01-18 08:54:14', '2024-01-18 08:54:14'),
-  ('K-07', 'Pangsit 6 pcs', 5000, true, 'pangsit.jpg', '2024-01-18 08:54:14', '2024-01-18 08:54:14'),
-  ('K-08', 'Kentang Goreng', 5000, true, 'kentang-goreng.jpg', '2024-01-18 08:54:14', '2024-01-18 08:54:14'),
-  ('K-09', 'Lontong Opor Ayam', 18000, true, 'lontong-opor-ayam.jpg', '2024-01-18 08:54:14', '2024-01-18 08:54:14');
+  ('K-01', 'Sate Ayam', 16000, true, 'sate-ayam.jpg'),
+  ('K-02', 'Nasi Goreng Telur', 14000, true, 'nasi-goreng-telor.jpg'),
+  ('K-03', 'Nasi Rames', 12000, true, 'nasi-rames.jpg'),
+  ('K-04', 'Mie Ayam Bakso', 14000, true, 'mie-ayam-bakso.jpg'),
+  ('K-05', 'Mie Goreng', 13000, true, 'mie-goreng.jpg'),
+  ('K-06', 'Bakso', 10000, true, 'bakso.jpg'),
+  ('K-07', 'Pangsit 6 pcs', 5000, true, 'pangsit.jpg'),
+  ('K-08', 'Kentang Goreng', 5000, true, 'kentang-goreng.jpg'),
+  ('K-09', 'Lontong Opor Ayam', 18000, true, 'lontong-opor-ayam.jpg');
  
  
  

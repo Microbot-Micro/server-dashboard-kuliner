@@ -4,16 +4,12 @@ const pool = new Pool({
   connectionString: process.env.POSTGRES_URL + "?sslmode=require",
 });
 
-// Penggunaan metode promise untuk menangani hasil query
-pool.query("SELECT NOW()")
-  .then(result => {
-    console.log(result.rows);  // Menampilkan hasil query
-  })
-  .catch(error => {
-    console.error("Error executing query:", error.message);  // Menampilkan pesan kesalahan
-  })
-  .finally(() => {
-    pool.end();  // Menutup koneksi pool setelah selesai
-  });
+pool.connect((err) => {
+  if (err) {
+    console.error('Error connecting to PostgreSQL:', err);
+  } else {
+    console.log("Connected to PostgreSQL successfully");
+  }
+});
 
 module.exports = pool;
